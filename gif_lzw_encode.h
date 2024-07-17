@@ -1,8 +1,8 @@
 #ifndef GIF_LZW_ENCODE_H
 #define GIF_LZW_ENCODE_H
 
-const size_t MAX_SIZE_CODE_TABLE = 4096;        //standard of encoding gif
-const int    MAX_SIZE_UNCOMPRESSED_DATA = 100;  //max size of uncompressed data
+#define MAX_SIZE_CODE_TABLE 4096        //standard of encoding gif
+#define MAX_SIZE_UNCOMPRESSED_DATA 100  //max size of uncompressed data
 
 //For LZW compressing
 typedef struct table_record {
