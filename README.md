@@ -4,7 +4,10 @@
 
 ## Оглавление
 
-+ [#]
++ [Постановка задачи](#постановка-задачи)
++ [Фаззинг проекта TIMG, Epic Fail](#фаззинг-проекта-timg-epic-fail)
++ [Фаззинг проекта Chafa, Success](#фаззинг-проекта-сhafa-success)
++ [Материалы и ошибки](#ошибки-и-материалы)
 
 ## Постановка задачи
 
@@ -26,7 +29,7 @@
 Нужно запустить 2+ процессов afl-fuzz и обеспечить синхронизацию между ними.
 Необходимо убедиться, что есть прирост найденных путей.
 
-## Фаззинг проекта  [TIMG](https://github.com/hzeller/timg), Epic Fail
+## Фаззинг проекта [TIMG](https://github.com/hzeller/timg), Epic Fail
 
 Выбранная программа [TIMG](https://github.com/hzeller/timg) , формат файла `*.gif`.
 
@@ -43,9 +46,8 @@ message(STATUS ">>> CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 message(STATUS ">>> ASAN: ${AFL_USE_ASAN}")
 ```
 
-![[images/20240708013018.png]]
-
 3. В отдельной папке организую фаззинг.
+
 Собрал корпус входных `*.gif` файлов и подключил соответственный стандартный словарь от aflpp. Запускаю aflpp(прохожу исправление всех ошибок).
 
 ```bash
@@ -54,7 +56,7 @@ export AFL_SKIP_CPUFREQ=1
 afl-fuzz -i input -o output -x ~/AFLplusplus/dictionaries/gif.dict -- /usr/local/bin/timg @@
 ```
 
-![[images/20240709133535.png]]
+![Запуск фаззинга timg](images/20240709133535.png)
 
 Первый вывод: ошибка (odd, check syntax) и levels = 1 - фаззер не может пройти в глубину, нужно применить инструменты и посмотреть где он ломается
 
@@ -63,21 +65,16 @@ afl-fuzz -i input -o output -x ~/AFLplusplus/dictionaries/gif.dict -- /usr/local
 afl-whatsup -s output/
 ```
 
-![[images/20240709134212.png]]
-
 Ничего не дало.
 
 Пробую применить `afl-plot`:
 ```bash
 afl-plot output/default plot
 ```
-![[images/20240709140736.png]]
 
 Ничего не дало.
 
 Пробую применить `afl-showmap`:
-
-![[images/20240709141412.png]]
 
 Показало, что дальше 20 вершин я не могу проникнуть по какой-то причине.
 
@@ -106,12 +103,13 @@ set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 Пришлось в установленном afl-cov пайтон скрипте искать проблему - оказалось при обработке оно считывало все файлы из default/queue/ с маской `id:000000` НО afl генерит файлы `id_000000` из-за этого он не мог считать ни одного файла. Поправил в самом коде, далее пришлось смотреть какие команды он вызывает и как объединяет файлы для lcov. Делал он это запуская 
 `cat ./output/default/queue/id_000001 | timeout -s KILL 5 cat ./output/default/queue/id_000001 | LD_LIBRARY_PATH=~/timg/build/src/CMakeFiles/timg.dir /usr/local/bin/timg ./output/default/queue/id_000001 -g100x100` - треш. Поэтому подогнал параметры строки и запускал все с исходниками в непосредственном месте билда. 
 
-После всех изменений и модификаций было получено для хороших изображений вывод:
+P.S. Потом я понял откуда возникла эта ошибка, при настройке AFL была ошибка о невозможности создания файлов `id:000000` и поэтому решение было включить опцию `#define SIMPLE_FILES` из-за этого хода скрипт afl-cov не сработал.
 
-![[images/20240711231701.png]]
+После всех изменений и модификаций было получено для хороших изображений вывод.
 
 Запускаю afl-cov с одним мутировавшим кривым gif:
-![[images/20240712091107.png]]
+
+![Отчет LCOV на мутировавший файл в timg](images/20240712091107.png)
 
 В этот момент стало понятно, что лучше взять другой проект для фаззинга, чтобы вернуться к изначальному заданию :cry: :cry: :cry: :cry: Несмотря на это было знакомство с cmake и afl-cov.
 
@@ -124,15 +122,16 @@ set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 
 1. Собрал проект и запустил 
 
-![[images/20240712182842.png]]
+![Запуск Chafa](images/20240712182842.png)
 
-2. Сборка с afl++: для компиляции используется сначала `./autogen.sh` затем множество вложенных `Makefile`. В каждом определен `CC=gcc`, поэтому в make добавляю `make --environment-overrides CC=afl-gcc-fast`. И продолжаю установку.
+1. Сборка с afl++: для компиляции используется сначала `./autogen.sh` затем множество вложенных `Makefile`. В каждом определен `CC=gcc`, поэтому в make добавляю `make --environment-overrides CC=afl-gcc-fast`. И продолжаю установку.
 
 В отдельном месте создаю `chafa/` с папками `input/*.gif` с корпусом входных гифок и `output/` для afl.
 
-> `*.gif` может иметь несколько картинок подряд которые могут проигрываться с анимацией. Из-за этого нужно добавлять критерии выполнения иначе будет превышение лимита по времени. После изучения параметров chafa решил выключить анимацию `--animate=off`. Также решил оставить гифки из 1 изображения.
+> `*.gif` может иметь несколько картинок подряд которые могут проигрываться с анимацией. Из-за этого нужно добавлять критерии выполнения иначе будет превышение лимита по времени. После изучения параметров chafa решил выключить анимацию `--animate=off`.
 
 **Сырой запуск с обычными мутациями:**
+
 ```bash
 export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 export AFL_SKIP_CPUFREQ=1
@@ -140,21 +139,7 @@ afl-fuzz -i input -o output_1 -- /usr/local/bin/chafa --animate=off @@
 ```
 Итог:
 
-![[images/20240713175636.png]]
-
-**Запуск с подключением стандартного GIF словаря:**
-
-```bash
-export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
-export AFL_SKIP_CPUFREQ=1
-afl-fuzz -i input -o output_2 -x ~/AFLplusplus/dictionaries/gif.dict -- /usr/local/bin/chafa --animate=off @@
-```
-
-Итог:
-
-![[images/20240713193126.png]]
-
-Были проведены тесты для стандартного фаззинга
+![Простой фаззинг Chafa](chafa/output_1/plot/edges.png)
 
 ## 4.2. Часть (Создание своей мутации для `.gif`)
 
@@ -172,19 +157,17 @@ afl-fuzz -i input -o output_2 -x ~/AFLplusplus/dictionaries/gif.dict -- /usr/loc
 + https://github.com/google/fuzzing/blob/master/docs/structure-aware-fuzzing.md - доки по мутациям от LibFuzzer с примером png
 + https://github.com/AFLplusplus/AFLplusplus/blob/stable/docs/custom_mutators.md - доки по мутациям от AFL++ с примером как использовать.
 
-![[images/20240714144618.png]]
+![Из чего состоит GIF](images/20240714144618.png)
 
 *Простыми словами:* файл в формате [GIF](https://ru.wikipedia.org/wiki/GIF) состоит из фиксированной области в начале файла, за которой располагается переменное число блоков, и заканчивается файл завершителем изображения.
 
 *На деле:* в нем есть области которые задают общие параметры изображения, параметры анимации и еще очень много параметров. Есть глобальная таблица цветов, локальная(опционально) а также данные изображения. 
 
-![[images/20240716205323.png]]
-
 Самая интересная область это Image Data это информация об изображении(состояниях пикселей), которая хранится в виде блоков байтов.
 
 Этот блок байт - результат сжатия LZW алгоритмом изначального блока цветов(последовательности индексов цветов 1,2,2,0,2,4).
 
-**Мутация**
+**Моя мутация:**
 
 Моя мутация генерирует GIF файл, при этом файл может быть валидным или нет.
 В нем случайным образом генерятся размеры холста, сдвиги слоя, кол-во картинок для анимации, цвета и данные изображение. 
@@ -193,11 +176,23 @@ afl-fuzz -i input -o output_2 -x ~/AFLplusplus/dictionaries/gif.dict -- /usr/loc
 
 Но в комбинации результат получается очень интересным и разнообразным(на фото ручной прогон сгенеренного файла в chafa) от бесконечной гифки до пустого места/failed to open.
 
-Поэтому такая генерация изображений вместе с мутациями AFL++ увеличивает покрытие.
+![Отображение chafa моих сгенеренных GIF](images/20240716205038.png)
 
-![[images/20240716210400.png]]
+Поэтому такая генерация изображений вместе с мутациями AFL++ увеличивает разнообразие входных файлов для программы
 
-Сборка с помощью цели `make mutation`
+`gif_generator.c`,`gif_generator.h` - генерирует буфер с содержимым GIF файла, включает в себя рандомизацию добавления необязательных расширений, а так же сами характеристики изображения и его данные.
+
+`gif_lzw_encode.c`,`gif_lzw_encode.h` - содержит немного упрощенную реализацию сжатия данных по LZW алгоритму. Используется в генераторе GIF
+
+`main.txt` - для дебагга генератора
+
+`mutation.c` - подключает AFL и содержит стандартные функции кастомного мутатора. Вызывает генератор GIF
+
+`Makefile` - имеет цели для сборки мутации и для обычной компиляции(для дебагга).Сборка с помощью цели `make mutation`
+
+**Пример генерации GIF файлов моим мутатором во время фаззинга:**
+
+![Очередь из GIF созданных моим генератором](images/20240717174828.png)
 
 **Запуск с кастомной мутацией:**
 
@@ -206,19 +201,47 @@ export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 export AFL_SKIP_CPUFREQ=1
 export AFL_USE_ASAN=1
 export AFL_CUSTOM_MUTATOR_LIBRARY="../gif_mutation.so"
-afl-fuzz -i input -o output_3 -- /usr/local/bin/chafa --animate=off @@
+afl-fuzz -i input -o output_2 -- /usr/local/bin/chafa --animate=off @@
 ```
-Итог:
 
-**Запуск с кастомной мутацией и словарем:**
+![Фаззинг Chafa с базовой + каст.мутацией](chafa/output_2/plot/edges.png)
+
+**Запуск с кастомной мутацией, словарем и фиксированным BitMap:**
+
+```bash
+export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
+export AFL_SKIP_CPUFREQ=1
+export AFL_USE_ASAN=1
+export AFL_MAP_SIZE=65536
+export AFL_CUSTOM_MUTATOR_LIBRARY="../gif_mutation.so"
+afl-fuzz -i input -o output_3 -x ~/AFLplusplus/dictionaries/gif.dict -- /usr/local/bin/chafa --animate=off @@
+```
+
+![Фаззинг Chafa с базовой, каст.мутацией и словарем](chafa/output_3/plot/edges.png)
 
 
+## 4.3. Часть (Параллельный фаззинг)
 
+В первом терминале запускаю главный процесс `-M`:
+```bash
+afl-fuzz -i input -o output_4 -M fuzzer01 -x ~/AFLplusplus/dictionaries/gif.dict -- /usr/local/bin/chafa --animate=off @@ 
+```
+В других вторичные процессы `-S`:
+```bash
+afl-fuzz -i input -o output_4 -S fuzzer02 -- /usr/local/bin/chafa --animate=off @@ 
+afl-fuzz -i input -o output_4 -S fuzzer03 -x ~/AFLplusplus/dictionaries/gif.dict -- /usr/local/bin/chafa --animate=off @@ 
+afl-fuzz -i input -o output_4 -S fuzzer04 -- /usr/local/bin/chafa --animate=off @@ 
+```
+> В главном процессе включаю свою мутацию, словарь
+> В первом вторичном - только свою мутацию `export AFL_CUSTOM_MUTATOR_ONLY=1`
+> Во втором вторичном - только словарь
+> В третьем вторичном - только хаотичные мутации
 
+![Параллельный фаззинг Chafa](chafa/output_4/plot/edges.png)
 
+## 4.3. Часть (Сравнения и выводы)
 
-
-
+После фаззинга для сравнения эффективности было решено сделать сравнение с помощью `afl-plot`:
 
 
 

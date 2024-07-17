@@ -1,0 +1,11 @@
+# environment variables:
+AFL_CUSTOM_MUTATOR_LIBRARY=../gif_mutation.so
+AFL_CUSTOM_MUTATOR_ONLY=1
+AFL_CUSTOM_INFO_PROGRAM=/usr/local/bin/chafa
+AFL_CUSTOM_INFO_PROGRAM_ARGV=--animate=off @@
+AFL_CUSTOM_INFO_OUT=output_4/fuzzer02
+AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
+AFL_SKIP_CPUFREQ=1
+AFL_USE_ASAN=1
+# command line:
+'afl-fuzz' '-i' 'input' '-o' 'output_4' '-S' 'fuzzer02' '--' '/usr/local/bin/chafa' '--animate=off' '@@'

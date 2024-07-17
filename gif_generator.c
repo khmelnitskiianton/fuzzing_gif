@@ -84,14 +84,14 @@ void generate_gif(gif_object_t *gif)
 //Set signature of GIF file
 static void generate_gif_title(gif_object_t *gif)
 {
-    char versions[] = {"GIF89a", "GIF87a"};
+    char versions[2][7] = {"GIF89a", "GIF87a"};
     if (rand() % 10)  //1/10 case will generate 87a version - old for many extensions
     {
         memcpy(gif->data, versions[0], 6);
     }
     else
     {
-        memcpy(gif->data, versions[0], 6);
+        memcpy(gif->data, versions[1], 6);
     }
     gif->pos += 6; 
 }

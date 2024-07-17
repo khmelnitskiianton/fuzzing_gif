@@ -1,8 +1,10 @@
 # environment variables:
+AFL_CUSTOM_MUTATOR_LIBRARY=../gif_mutation.so
 AFL_CUSTOM_INFO_PROGRAM=/usr/local/bin/chafa
 AFL_CUSTOM_INFO_PROGRAM_ARGV=--animate=off @@
-AFL_CUSTOM_INFO_OUT=output_2/default
+AFL_CUSTOM_INFO_OUT=output_3/default
 AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 AFL_SKIP_CPUFREQ=1
+AFL_USE_ASAN=1
 # command line:
-'afl-fuzz' '-i' '-' '-o' 'output_2' '-x' '/home/anton/AFLplusplus/dictionaries/gif.dict' '--' '/usr/local/bin/chafa' '--animate=off' '@@'
+'afl-fuzz' '-i' 'input' '-o' 'output_3' '--' '/usr/local/bin/chafa' '--animate=off' '@@'
