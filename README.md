@@ -147,6 +147,7 @@ afl-fuzz -i input -o output_1 -- /usr/local/bin/chafa --animate=off @@
 Чтобы увеличить эффективность фаззинга, нужно разобраться с типом входных данных и учесть мутацию конкретно для моего типа, т.е. `.gif`.
 
 Поэтому нужно создать [кастомную мутацию](https://github.com/AFLplusplus/AFLplusplus/blob/stable/docs/custom_mutators.md) для AFL++ на основе `gif`. 
+
 Для изучения внутренности `gif` использую статьи:
 
 + https://habr.com/ru/articles/274917/
@@ -154,7 +155,9 @@ afl-fuzz -i input -o output_1 -- /usr/local/bin/chafa --animate=off @@
 + https://habr.com/ru/companies/tradingview/articles/184660/
 + https://www.matthewflickinger.com/lab/whatsinagif/bits_and_bytes.asp
 + https://www.matthewflickinger.com/lab/whatsinagif/lzw_image_data.asp
+
 Для создания мутаций смотрю:
+
 + https://github.com/google/fuzzing/blob/master/docs/structure-aware-fuzzing.md - доки по мутациям от LibFuzzer с примером png
 + https://github.com/AFLplusplus/AFLplusplus/blob/stable/docs/custom_mutators.md - доки по мутациям от AFL++ с примером как использовать.
 
@@ -173,6 +176,7 @@ afl-fuzz -i input -o output_1 -- /usr/local/bin/chafa --animate=off @@
 **Моя мутация:**
 
 Моя мутация генерирует GIF файл, при этом файл может быть валидным или нет.
+
 В нем случайным образом генерятся размеры холста, сдвиги слоя, кол-во картинок для анимации, цвета и данные изображение. 
 
 При этом данные изображения генерятся изначально в виде последовательности индексов цвета, а затем сжимаются по LZW алгоритму(сделал упрощенную его реализацию по [статье](https://www.matthewflickinger.com/lab/whatsinagif/lzw_image_data.asp)). Поэтому несмотря на рандомизацию многих параметров, данные изображения всегда будут валидными! 
@@ -249,9 +253,9 @@ afl-fuzz -i input -o output_4 -S fuzzer04 -- /usr/local/bin/chafa --animate=off 
 
 После фаззинга сравнение эффективности было решено сделать с помощью `afl-plot`:
 
-Сравнивая графики зависимости кол-ва покрытых вершин от времени можно убедиться в эффективности написанной кастомной мутации, которая дает прирост в скорости на начальном участке(в моем случае 0-1000 сек), перед выходом графика на "плато".
+Сравнивая графики зависимости кол-ва покрытых вершин от времени можно убедиться в эффективности написанной кастомной мутации, которая дает прирост в скорости на начальном участке(в моем случае 0-2000 сек), перед выходом графика на "плато".
 
-Параллельный фаззинг за время в 4 раза меньше(4 процесса по 1000сек дали на графике 4000 сек) дал почти тот же результат, даже учитывая что процессы запускались с разными опциями.
+Параллельный фаззинг за время в 4 раза меньше(4 процесса) дал почти тот же результат, даже учитывая, что процессы запускались с разными опциями.
 
 **Итог:** задача по фаззингу выполнена!
 
@@ -317,6 +321,7 @@ LibFuzzer:
 + https://github.com/google/fuzzing/tree/master
 + https://github.com/google/fuzzing/blob/master/docs/structure-aware-fuzzing.md
 + https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
+
 AFL++:
 + https://github.com/AFLplusplus/AFLplusplus
 + https://github.com/AFLplusplus/AFLplusplus/blob/stable/docs/fuzzing_in_depth.md
