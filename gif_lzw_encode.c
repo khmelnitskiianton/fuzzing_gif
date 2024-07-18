@@ -1,8 +1,7 @@
 /*
-
     My simple realization of encoding data of color indexes with GIF LZW format
     It bases on https://www.matthewflickinger.com/lab/whatsinagif/lzw_image_data.asp
-
+    Check in it stages of algorithm
 */
 
 #include <stdint.h>
@@ -13,16 +12,17 @@
 
 #include "gif_lzw_encode.h"
 
-const size_t INIT_RECORD_STR_SIZE = 20;
-const int    NOT_FIND             = -1;
+const static size_t INIT_RECORD_STR_SIZE = 20;
+const static int    NOT_FIND             = -1;
 
-static void gif_lzw_create_record   (code_table_t *table, size_t size_of_bytes);
-static int  gif_lzw_find_record     (const uint8_t *index_buffer, const size_t size_of_buf, code_table_t *table);
-static void gif_lzw_add_to_table    (const uint8_t *index_buffer, const size_t len_index_buffer, code_table_t *table);
-static bool gif_lzw_custom_compare  (const uint8_t *buff1, const size_t size_buf1, const uint8_t *buff2, const size_t size_buf2);
+static void gif_lzw_create_record (code_table_t *table, size_t size_of_bytes);
+static int  gif_lzw_find_record   (const uint8_t *index_buffer, const size_t size_of_buf, code_table_t *table);
+static void gif_lzw_add_to_table  (const uint8_t *index_buffer, const size_t len_index_buffer, code_table_t *table);
+static bool gif_lzw_custom_compare(const uint8_t *buff1, const size_t size_buf1, const uint8_t *buff2, const size_t size_buf2);
 
-//This function compresses buffer with GIF LZW. LZW minimum code size default - minimum degree of two bigger than amount of colors
-void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_buf, uint8_t *compressed_buffer, size_t *size_comp_buf, const uint8_t lzw_minimum_code_size)
+//This function compresses buffer with GIF LZW. 
+void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_buf, 
+                      uint8_t *compressed_buffer, size_t *size_comp_buf, const uint8_t lzw_minimum_code_size)
 {
     code_table_t table = {}; //create code table
     table.size = 0;
@@ -33,7 +33,8 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
         gif_lzw_create_record(&table, 1);
         table.records[i].str[0] = (uint8_t) (table.records[i].code);
     }
-    //two special records
+
+    //Two special records in table
     gif_lzw_create_record(&table, strlen("Clear Code"));
     int index_cc = (int) table.size-1;
     memcpy(table.records[(table.size)-1].str, "Clear Code", strlen("Clear Code"));
@@ -43,20 +44,22 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
 
     //Start algorithm
     uint8_t lzw_current_code_size = lzw_minimum_code_size + 1; //start size of bits for code
-    //1. Compress to code stream with codes from table.
+    //Compress to code stream with codes from table.
     uint8_t index_buffer[MAX_SIZE_UNCOMPRESSED_DATA] = {};//support buffer
     uint8_t k = 0;
-    size_t  pos_index_buffer = 0;
+    size_t pos_index_buffer = 0;
     *size_comp_buf = 0;
 
-    uint8_t  byte_buf = 0;   // byte buffer write table code and write to compressed data if full
-    uint8_t  buf_ptr = 1;    //number = 2^n - set current bit in byte
-    int      index_ptr = 1; //number = 2^n - set current bit in number
+    uint8_t byte_buf  = 0; //byte buffer write table code and write to compressed data if full
+    uint8_t buf_ptr   = 1; //number = 2^n - set current bit in byte
+    int     index_ptr = 1; //number = 2^n - set current bit in number
 
-    //1 byte add Clear Code 
+    //1 byte to add Clear Code in comp_data
+    //This pattern loop is realization of conversion indexes in table to byte stream - during all this function!
+    //Next I will continue use it with same variables 
     for (int i = 0; i < lzw_current_code_size; i++)
     {
-        byte_buf += buf_ptr * ((uint8_t)(!!(index_cc & index_ptr)));
+        byte_buf += buf_ptr * ((uint8_t)(!!(index_cc & index_ptr))); 
         index_ptr <<= 1;
         if (buf_ptr == 0x80){
             compressed_buffer[*size_comp_buf] = byte_buf;
@@ -68,14 +71,13 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
         buf_ptr <<= 1;
     }
 
-
-    index_buffer[pos_index_buffer++] = uncompressed_buffer[0]; //move 1 byte in buffer
+    index_buffer[pos_index_buffer++] = uncompressed_buffer[0]; //move first byte in buffer
 
     for (size_t i = 1; i < size_unc_buf; i++)
     {
         k = uncompressed_buffer[i];
         index_buffer[pos_index_buffer++] = k; //move previous k in index buffer
-        if (gif_lzw_find_record(index_buffer, pos_index_buffer,&table) != -1) //is content of index buffer in table
+        if (gif_lzw_find_record(index_buffer, pos_index_buffer,&table) != NOT_FIND) //is content of index buffer in table
         {
             //k in index buffer already
         }
@@ -85,9 +87,10 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
             pos_index_buffer--;
             index_buffer[pos_index_buffer] = 0;//remove k from index buffer
             int find_record = gif_lzw_find_record(index_buffer, pos_index_buffer, &table);
-            if (find_record != -1) 
+            if (find_record != NOT_FIND) 
             {   
                 index_ptr = 1; //number = 2^n - set current bit in number
+                //translate find index in byte stream! Like before
                 for (int j = 0; j < lzw_current_code_size; j++)
                 {
                     byte_buf += buf_ptr * ((uint8_t)(!!(find_record & index_ptr)));
@@ -95,7 +98,7 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
                     if (buf_ptr == 0x80){
                         compressed_buffer[*size_comp_buf] = byte_buf;
                         (*size_comp_buf)++;
-                        if (*size_comp_buf == 255) {goto end_action;}
+                        if (*size_comp_buf == UINT8_MAX) {goto end_action;}
                         byte_buf = 0;
                         buf_ptr = 1;
                         continue;
@@ -112,9 +115,10 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
     }
     //Write code of index buffer after loop
     int end_index_index_buffer = gif_lzw_find_record(index_buffer, pos_index_buffer,&table);
-    if (end_index_index_buffer != -1)
+    if (end_index_index_buffer != NOT_FIND)
     { 
         index_ptr = 1; //number = 2^n - set current bit in number
+        //translate 
         for (int i = 0; i < lzw_current_code_size; i++)
         {
             byte_buf += buf_ptr * ((uint8_t)(!!(end_index_index_buffer & index_ptr)));
@@ -122,7 +126,7 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
             if (buf_ptr == 0x80){
                 compressed_buffer[*size_comp_buf] = byte_buf;
                 (*size_comp_buf)++;
-                if (*size_comp_buf == 255) {goto end_action;}
+                if (*size_comp_buf == UINT8_MAX) {goto end_action;}
                 byte_buf = 0;
                 buf_ptr = 1;
                 continue;
@@ -141,7 +145,7 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
             if (buf_ptr == 0x80){
                 compressed_buffer[*size_comp_buf] = byte_buf;
                 (*size_comp_buf)++;
-                if (*size_comp_buf == 255) {goto end_action;}
+                if (*size_comp_buf == UINT8_MAX) {goto end_action;}
                 byte_buf = 0;
                 buf_ptr = 1;
                 continue;
@@ -159,7 +163,7 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
         if (buf_ptr == 0x80){
             compressed_buffer[*size_comp_buf] = byte_buf;
             (*size_comp_buf)++;
-            if (*size_comp_buf == 255) {goto end_action;}
+            if (*size_comp_buf == UINT8_MAX) {goto end_action;}
             byte_buf = 0;
             buf_ptr = 1;
             continue;
@@ -169,7 +173,7 @@ void gif_lzw_compress(const uint8_t *uncompressed_buffer, const size_t size_unc_
     //Clear bit buffer
     if (byte_buf) 
     {
-        if (*size_comp_buf == 255) {goto end_action;}
+        if (*size_comp_buf == NOT_FIND) {goto end_action;}
         compressed_buffer[*size_comp_buf] = byte_buf;
         (*size_comp_buf)++;
     }
