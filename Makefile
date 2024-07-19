@@ -28,10 +28,14 @@ OBJFILES_SRC = $(patsubst ./$(SRC_SRC)/%,./$(OBJ)/%,$(SOURCES_SRC:$(SRC_C_EXT)=.
 	$(CC)  $(CXXFLAGS) -c -o $@ $<
 
 #========================================================================================
+#You need to change extension of mutation1.c or mutation2.c to .txt
+.PHONY: mutation1
+mutation1: $(SOURCES_SRC)
+	$(CC) -shared -Wall -O3 -I/home/anton/AFLplusplus/include -I. $^ -o gif_mutation1.so
 
-.PHONY: mutation
-mutation: $(SOURCES_SRC)
-	$(CC) -shared -Wall -O3 -I/home/anton/AFLplusplus/include -I. $^ -o gif_mutation.so
+.PHONY: mutation2
+mutation2: $(SOURCES_SRC)
+	$(CC) -shared -Wall -O3 -I/home/anton/AFLplusplus/include -I. $^ -o gif_mutation2.so
 
 .PHONY: all
 all: 
