@@ -200,6 +200,8 @@ P.S. Потом я понял откуда возникла эта ошибка,
 
 Затем строю графики в `afl-plot`: `afl-plot output_N/default output_N/plot` - там есть все построенные графики
 
+Результаты находятся в `./chafa/output_N`, папки `default` и `plot`
+
 **Фаззинг с обычными мутациями:**
 
 ```bash
@@ -218,7 +220,7 @@ export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 export AFL_SKIP_CPUFREQ=1
 export AFL_MAP_SIZE=65535
 export AFL_CUSTOM_MUTATOR_ONLY=1
-export AFL_CUSTOM_MUTATOR_LIBRARY="../gif_mutation.so"
+export AFL_CUSTOM_MUTATOR_LIBRARY="../gif_mutation1.so;../gif_mutation2.so"
 afl-fuzz -i input -o output_2 -- /usr/local/bin/chafa --animate=off @@
 ```
 
@@ -230,7 +232,7 @@ afl-fuzz -i input -o output_2 -- /usr/local/bin/chafa --animate=off @@
 export AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES=1
 export AFL_SKIP_CPUFREQ=1
 export AFL_MAP_SIZE=65535
-export AFL_CUSTOM_MUTATOR_LIBRARY="../gif_mutation.so"
+export AFL_CUSTOM_MUTATOR_LIBRARY="../gif_mutation1.so;../gif_mutation2.so"
 afl-fuzz -i input -o output_3 -- /usr/local/bin/chafa --animate=off @@
 ```
 
