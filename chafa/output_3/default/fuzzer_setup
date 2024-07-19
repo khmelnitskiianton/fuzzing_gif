@@ -1,5 +1,5 @@
 # environment variables:
-AFL_CUSTOM_MUTATOR_LIBRARY=../gif_mutation.so
+AFL_CUSTOM_MUTATOR_LIBRARY=../gif_mutation1.so
 AFL_CUSTOM_INFO_PROGRAM=/usr/local/bin/chafa
 AFL_CUSTOM_INFO_PROGRAM_ARGV=--animate=off @@
 AFL_CUSTOM_INFO_OUT=output_3/default
